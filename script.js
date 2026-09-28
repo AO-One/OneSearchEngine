@@ -75,68 +75,73 @@ async function performOneSearch() {
     }
 }
 
-// 4. EXTERNAL WEB & YOUTUBE SEARCH ENGINE
+// EXTERNAL WEB & YOUTUBE SEARCH ENGINE
 async function fetchSearchResults(query) {
-    const aiBox = document.getElementById('ai-response-box');
     const resultsContainer = document.getElementById('onesearch-results');
+    const isSafeEnabled = document.getElementById('safe-search-toggle')?.checked;
     
     if (!resultsContainer) return;
 
     // Clear previous results & show loading state
-    resultsContainer.innerHTML = "<p style='color:#888;'>Searching the web and YouTube...</p>";
+    resultsContainer.innerHTML = "<p style='color:#888;'>Searching global web and video index...</p>";
 
     try {
-        // If searching specifically for YouTube/Video content
-        if (query.toLowerCase().includes("youtube") || query.toLowerCase().includes("video") || query.toLowerCase().includes("song") || query.toLowerCase().includes("music")) {
-            renderYouTubeResults(query, resultsContainer);
+        // Option A: Video / YouTube Intent
+        if (query.toLowerCase().includes("youtube") || query.toLowerCase().includes("video") || query.toLowerCase().includes("song")) {
+            await renderYouTubeResults(query, resultsContainer);
         } else {
-            // Standard Web Search
-            renderGeneralWebResults(query, resultsContainer);
+            // Option B: Global Web Search across all sites
+            await renderGeneralWebResults(query, resultsContainer, isSafeEnabled);
         }
     } catch (error) {
-        resultsContainer.innerHTML = `<p style="color:red;">Error loading results: ${error.message}</p>`;
+        resultsContainer.innerHTML = `<p style="color:red;">Error fetching live web results: ${error.message}</p>`;
     }
 }
 
-// Render YouTube Results using public Invidious API
-async function renderYouTubeResults(query, container) {
-    const cleanQuery = encodeURIComponent(query.replace(/youtube/gi, '').trim() || query);
+// Global Web Search Renderer (SearXNG Metasearch with SafeSearch)
+async function renderGeneralWebResults(query, container, isSafeEnabled) {
+    const cleanQuery = encodeURIComponent(query);
     
-    // Open Invidious endpoint for zero-key YouTube searches
-    const apiUrl = `https://vid.puffyan.us/api/v1/search?q=${cleanQuery}&type=video`;
+    // safe_search values: 0 = Off, 1 = Moderate, 2 = Strict
+    const safeParam = isSafeEnabled ? 2 : 0;
+    
+    // Public SearXNG instance endpoint with JSON output enabled
+    const searxUrl = `https://searx.be/search?q=${cleanQuery}&format=json&safe_search=${safeParam}`;
 
     try {
-        const res = await fetch(apiUrl);
-        const videos = await res.json();
+        const response = await fetch(searxUrl);
+        const data = await response.json();
 
-        if (!videos || videos.length === 0) {
-            container.innerHTML = "<p>No YouTube videos found.</p>";
+        if (!data.results || data.results.length === 0) {
+            container.innerHTML = "<p>No safe web results found matching your query.</p>";
             return;
         }
 
-        let html = "<h3 style='margin-bottom:12px;'>YouTube Video Results</h3><div class='video-grid' style='display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;'>";
+        let html = `<h3 style="margin-bottom:12px;">Web Results ${isSafeEnabled ? '<span style="font-size:12px; color:#4EC9B0;">[SafeSearch Active]</span>' : ''}</h3>`;
         
-        videos.slice(0, 6).forEach(video => {
+        // Display top 8 web results
+        data.results.slice(0, 8).forEach(item => {
             html += `
-                <div class="video-card" style="border: 1px solid #333; padding: 10px; border-radius: 8px; background: #1e1e1e;">
-                    <a href="https://www.youtube.com/watch?v=${video.videoId}" target="_blank" style="text-decoration:none; color:white;">
-                        <img src="${video.videoThumbnails ? video.videoThumbnails[0].url : ''}" style="width:100%; border-radius:6px; aspect-ratio: 16/9; object-fit: cover;" alt="${video.title}" />
-                        <h4 style="margin: 8px 0 4px 0; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${video.title}</h4>
-                        <span style="font-size:12px; color:#aaa;">${video.author}</span>
+                <div class="result-card" style="margin-bottom:15px; padding:12px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
+                    <a href="${item.url}" target="_blank" style="color:#4EC9B0; font-size:16px; font-weight:bold; text-decoration:none;">
+                        ${item.title}
                     </a>
+                    <div style="color:#888; font-size:12px; margin: 4px 0;">${item.url}</div>
+                    <p style="color:#ccc; font-size:13px; margin:0;">${item.content || 'No description available.'}</p>
                 </div>
             `;
         });
-        html += "</div>";
+
         container.innerHTML = html;
 
     } catch (err) {
-        // Fallback link if external API fetch is restricted by browser CORS
+        // Fallback UI if public SearXNG instance is rate-limited
         container.innerHTML = `
-            <div style="padding:15px; background:#252526; border-radius:8px; margin-top:10px;">
-                <p><strong>YouTube Search Ready:</strong></p>
-                <a href="https://www.youtube.com/results?search_query=${cleanQuery}" target="_blank" style="color:#4EC9B0; font-size:16px;">
-                    Click here to view results for "${query}" on YouTube
+            <div class="result-card" style="padding:15px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
+                <h4 style="margin:0 0 8px 0;">Global Search Gateway</h4>
+                <p style="color:#ccc; font-size:13px;">SafeSearch is currently forcing filtered results for: <strong>${query}</strong></p>
+                <a href="https://duckduckgo.com/?q=${cleanQuery}&kp=${isSafeEnabled ? '1' : '-1'}" target="_blank" style="color:#4EC9B0; text-decoration:none;">
+                    ▶ View Safe Web Results on DuckDuckGo
                 </a>
             </div>
         `;
