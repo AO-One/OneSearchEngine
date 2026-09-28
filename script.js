@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
     const safeToggle = document.getElementById('safe-search-toggle');
 
-    // Load SafeSearch preference from "Memory SLL" (LocalStorage)
+    // Load SafeSearch preference from "Memory" (LocalStorage)
     if (safeToggle) {
         const isSafe = localStorage.getItem('oneOS_SafeSearch') === 'true';
         safeToggle.checked = isSafe;
@@ -36,12 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // 3. THE UNIFIED SEARCH ENGINE (The Brain)
 async function performOneSearch() {
     const input = document.getElementById('search-input');
-    const query = input.value.trim();
+    const query = input?.value.trim();
     const isSafeEnabled = document.getElementById('safe-search-toggle')?.checked;
     
     if (!query) return;
 
-    // Save SafeSearch setting to "Memory"
+    // Save SafeSearch setting
     localStorage.setItem('oneOS_SafeSearch', isSafeEnabled);
 
     // A. Save to History
@@ -50,7 +50,7 @@ async function performOneSearch() {
     // B. LOCAL BUSINESS SEARCH (Filtering for Safety if enabled)
     let localResults = businessIndex.filter(biz => 
         biz.name.toLowerCase().includes(query.toLowerCase()) || 
-        biz.keywords.some(k => k.toLowerCase().includes(query.toLowerCase()))
+        (biz.keywords && biz.keywords.some(k => k.toLowerCase().includes(query.toLowerCase())))
     );
 
     if (isSafeEnabled) {
@@ -75,7 +75,7 @@ async function performOneSearch() {
     }
 }
 
-// EXTERNAL WEB & YOUTUBE SEARCH ENGINE
+// 4. EXTERNAL WEB & YOUTUBE SEARCH ENGINE
 async function fetchSearchResults(query) {
     const resultsContainer = document.getElementById('onesearch-results');
     const isSafeEnabled = document.getElementById('safe-search-toggle')?.checked;
@@ -98,14 +98,53 @@ async function fetchSearchResults(query) {
     }
 }
 
+// Render YouTube Results
+async function renderYouTubeResults(query, container) {
+    const cleanQuery = encodeURIComponent(query.replace(/youtube/gi, '').trim() || query);
+    const apiUrl = `https://vid.puffyan.us/api/v1/search?q=${cleanQuery}&type=video`;
+
+    try {
+        const res = await fetch(apiUrl);
+        const videos = await res.json();
+
+        if (!videos || videos.length === 0) {
+            container.innerHTML = "<p>No YouTube videos found.</p>";
+            return;
+        }
+
+        let html = "<h3 style='margin-bottom:12px;'>YouTube Video Results</h3><div class='video-grid' style='display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;'>";
+        
+        videos.slice(0, 6).forEach(video => {
+            html += `
+                <div class="video-card" style="border: 1px solid #333; padding: 10px; border-radius: 8px; background: #1e1e1e;">
+                    <a href="https://www.youtube.com/watch?v=${video.videoId}" target="_blank" style="text-decoration:none; color:white;">
+                        <img src="${video.videoThumbnails ? video.videoThumbnails[0].url : ''}" style="width:100%; border-radius:6px; aspect-ratio: 16/9; object-fit: cover;" alt="${video.title}" />
+                        <h4 style="margin: 8px 0 4px 0; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${video.title}</h4>
+                        <span style="font-size:12px; color:#aaa;">${video.author}</span>
+                    </a>
+                </div>
+            `;
+        });
+        html += "</div>";
+        container.innerHTML = html;
+
+    } catch (err) {
+        // Fallback UI
+        container.innerHTML = `
+            <div style="padding:15px; background:#1e1e1e; border-radius:8px; border:1px solid #333; margin-top:10px;">
+                <p><strong>YouTube Search Gateway:</strong></p>
+                <a href="https://www.youtube.com/results?search_query=${cleanQuery}" target="_blank" style="color:#4EC9B0; font-size:16px;">
+                    ▶ View results for "${query}" on YouTube
+                </a>
+            </div>
+        `;
+    }
+}
+
 // Global Web Search Renderer (SearXNG Metasearch with SafeSearch)
 async function renderGeneralWebResults(query, container, isSafeEnabled) {
     const cleanQuery = encodeURIComponent(query);
-    
-    // safe_search values: 0 = Off, 1 = Moderate, 2 = Strict
     const safeParam = isSafeEnabled ? 2 : 0;
-    
-    // Public SearXNG instance endpoint with JSON output enabled
     const searxUrl = `https://searx.be/search?q=${cleanQuery}&format=json&safe_search=${safeParam}`;
 
     try {
@@ -119,7 +158,6 @@ async function renderGeneralWebResults(query, container, isSafeEnabled) {
 
         let html = `<h3 style="margin-bottom:12px;">Web Results ${isSafeEnabled ? '<span style="font-size:12px; color:#4EC9B0;">[SafeSearch Active]</span>' : ''}</h3>`;
         
-        // Display top 8 web results
         data.results.slice(0, 8).forEach(item => {
             html += `
                 <div class="result-card" style="margin-bottom:15px; padding:12px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
@@ -135,7 +173,6 @@ async function renderGeneralWebResults(query, container, isSafeEnabled) {
         container.innerHTML = html;
 
     } catch (err) {
-        // Fallback UI if public SearXNG instance is rate-limited
         container.innerHTML = `
             <div class="result-card" style="padding:15px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
                 <h4 style="margin:0 0 8px 0;">Global Search Gateway</h4>
@@ -146,20 +183,6 @@ async function renderGeneralWebResults(query, container, isSafeEnabled) {
             </div>
         `;
     }
-}
-
-// Fallback General Web Results
-function renderGeneralWebResults(query, container) {
-    const cleanQuery = encodeURIComponent(query);
-    container.innerHTML = `
-        <div class="result-card" style="margin-top:15px; padding:15px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
-            <h4 style="margin:0 0 8px 0;">Web & Media Search</h4>
-            <a href="https://www.youtube.com/results?search_query=${cleanQuery}" target="_blank" style="color:#4EC9B0; font-size:16px; text-decoration:none;">
-                ▶ View YouTube Video Results for "${query}"
-            </a>
-            <p style="color:#ccc; font-size:13px; margin-top:6px;">Discover channels, music, and videos matching your search on YouTube.</p>
-        </div>
-    `;
 }
 
 // 5. UI DISPLAY FUNCTIONS
@@ -199,7 +222,8 @@ function displayHistory() {
 }
 
 function autoFillSearch(item) {
-    document.getElementById('search-input').value = item;
+    const input = document.getElementById('search-input');
+    if (input) input.value = item;
     performOneSearch();
 }
 
