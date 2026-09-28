@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneSearchEngine - Empowering All</title>
+    <link rel="stylesheet" href="CSS/indexstylesheet.css">
+</head>
+<body>
+
+    <!-- Safe Search Toggle Header -->
+    <div class="safe-search-header">
+        <span>Safe Search</span>
+        <label class="switch">
+            <input type="checkbox" id="safe-search-toggle">
+            <span class="slider round"></span>
+        </label>
+    </div>
+
+    <!-- History Sidebar -->
+    <div id="history-sidebar" class="sidebar">
+        <h3>Search History</h3>
+        <ul id="history-list"></ul>
+        <button onclick="clearHistory()" class="clear-btn">Clear History</button>
+    </div>
+
+    <!-- Main OneSearch Interface -->
+    <div class="search-container">
+        <img src="Images/businesslogo.png" alt="ONE Logo" class="logo">
+        
+        <!-- Primary Unified Search Box -->
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Search the world, empowered by AI..." autofocus>
+            <button id="search-button" onclick="executeSearch()">Search</button>
+        </div>
+
+        <div class="mission-tag">
+            Architecting a calmer, more productive world.
+        </div>
+
+        <!-- Adpagespace Sponsored Container (Appears Above Organic Results) -->
+        <div id="adpagespace-top-slot" class="adpagespace-container" style="display: none;">
+            <span class="ad-label">Sponsored by Adpagespace</span>
+            <div id="adpagespace-banner-content">
+                <!-- Dynamic Ad Banner Loaded Here -->
+            </div>
+        </div>
+
+        <!-- Consolidated Results Section -->
+        <div class="results-wrapper">
+            <div id="ai-response-box" class="ai-snippet"></div>
+            <div id="local-results-container" class="business-grid"></div>
+            <div id="onesearch-results"></div>
+        </div>
+    </div>
+
+    <!-- Search Execution & Adpagespace Integration Script -->
+    <script>
+        function executeSearch() {
+            const query = document.getElementById('search-input').value.trim();
+            const adSlot = document.getElementById('adpagespace-top-slot');
+            const adBanner = document.getElementById('adpagespace-banner-content');
+
+            if (!query) return;
+
+            // 1. Trigger organic search logic (handled in script.js / generator.js if present)
+            if (typeof fetchSearchResults === "function") {
+                fetchSearchResults(query);
+            }
+
+            // 2. Fetch and render matching Adpagespace Advert
+            fetchAdpagespaceAdvert(query, function(adData) {
+                if (adData) {
+                    adBanner.innerHTML = `
+                        <a href="${adData.targetUrl}" target="_blank" rel="noopener">
+                            <img src="${adData.imageUrl}" alt="${adData.altText}" style="width:100%; max-height:200px; object-fit:cover; border-radius:6px;" />
+                        </a>
+                    `;
+                    adSlot.style.display = 'block';
+                } else {
+                    adSlot.style.display = 'none';
+                }
+            });
+        }
+
+        // Fetch Adpagespace Advert Endpoint/Mock
+        function fetchAdpagespaceAdvert(keyword, callback) {
+            console.log("Fetching Adpagespace ad for keyword:", keyword);
+            
+            // Example ad return payload (replace with actual API fetch call)
+            const mockAd = {
+                imageUrl: "https://via.placeholder.com/1400x300?text=Your+Business+Here+-+Adpagespace",
+                targetUrl: "https://adpagespace.com",
+                altText: "Adpagespace Promotion"
+            };
+            
+            callback(mockAd);
+        }
+
+        // Allow pressing "Enter" key to search
+        document.getElementById("search-input").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                executeSearch();
+            }
+        });
+    </script>
+
+    <script src="JS/script.js"></script>
+    <script src="JS/generator.js"></script>
+</body>
+</html>
