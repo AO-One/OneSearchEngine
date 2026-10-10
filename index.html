@@ -38,7 +38,7 @@
             Architecting a calmer, more productive world.
         </div>
 
-        <!-- Adpagespace Sponsored Container (Appears Above Organic Results) -->
+        <!-- Adpagespace Sponsored Container -->
         <div id="adpagespace-top-slot" class="adpagespace-container" style="display: none;">
             <span class="ad-label">Sponsored by Adpagespace</span>
             <div id="adpagespace-banner-content">
@@ -63,12 +63,10 @@
 
             if (!query) return;
 
-            // 1. Trigger organic search logic (handled in script.js / generator.js if present)
             if (typeof fetchSearchResults === "function") {
                 fetchSearchResults(query);
             }
 
-            // 2. Fetch and render matching Adpagespace Advert
             fetchAdpagespaceAdvert(query, function(adData) {
                 if (adData) {
                     adBanner.innerHTML = `
@@ -83,21 +81,15 @@
             });
         }
 
-        // Fetch Adpagespace Advert Endpoint/Mock
         function fetchAdpagespaceAdvert(keyword, callback) {
-            console.log("Fetching Adpagespace ad for keyword:", keyword);
-            
-            // Example ad return payload (replace with actual API fetch call)
             const mockAd = {
                 imageUrl: "https://via.placeholder.com/1400x300?text=Your+Business+Here+-+Adpagespace",
                 targetUrl: "https://adpagespace.com",
                 altText: "Adpagespace Promotion"
             };
-            
             callback(mockAd);
         }
 
-        // Allow pressing "Enter" key to search
         document.getElementById("search-input").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 executeSearch();
