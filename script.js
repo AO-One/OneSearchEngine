@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event delegation for history items
+    // Event delegation for history items (Keeps user on OneSearchEngine)
     if (historyList) {
         historyList.addEventListener('click', (e) => {
             if (e.target && e.target.tagName === 'LI') {
@@ -81,7 +81,7 @@ async function performOneSearch() {
     }
     displayLocalResults(localResults);
 
-    // C. EXTERNAL WEB & YOUTUBE SEARCH (Displays directly in OneSearch UI)
+    // C. EXTERNAL WEB & YOUTUBE SEARCH
     fetchSearchResults(query);
 
     // D. AI INSIGHTS (HostGPT Integration)
@@ -109,11 +109,9 @@ async function fetchSearchResults(query) {
     resultsContainer.innerHTML = "<p style='color:#888;'>Searching OneSearch Web Index...</p>";
 
     try {
-        // Video Intent Routing
         if (query.toLowerCase().includes("youtube") || query.toLowerCase().includes("video") || query.toLowerCase().includes("song")) {
             await renderYouTubeResults(query, resultsContainer);
         } else {
-            // Native OneSearch Proxy Routing
             await renderGeneralWebResults(query, resultsContainer, isSafeEnabled);
         }
     } catch (error) {
@@ -121,12 +119,11 @@ async function fetchSearchResults(query) {
     }
 }
 
-// 5. NATIVE ONESEARCH WEB RENDERER (Via Local SQLite / FTS5 Backend)
+// 5. NATIVE ONESEARCH WEB RENDERER
 async function renderGeneralWebResults(query, container, isSafeEnabled) {
     const cleanQuery = encodeURIComponent(query);
     const proxyUrl = `http://127.0.0.1:5000/api/search?q=${cleanQuery}&safe=${isSafeEnabled}`;
 
-    // Direct Brand Matches (Screwfix, Toolstation, Wikipedia, BBC, etc.)
     let brandHtml = getDirectBrandMatch(query);
 
     try {
@@ -156,7 +153,6 @@ async function renderGeneralWebResults(query, container, isSafeEnabled) {
         console.warn("OneSearch backend offline at http://127.0.0.1:5000");
     }
 
-    // Fallback UI when server.py is not running
     container.innerHTML = brandHtml + `
         <div class="result-card" style="padding:16px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
             <h4 style="margin:0 0 8px 0; color:#fff;">OneSearch Engine Backend Standby</h4>
@@ -269,7 +265,7 @@ function displayHistory() {
     if (!list) return;
     const history = JSON.parse(localStorage.getItem('oneSearchHistory')) || [];
     list.innerHTML = history.map(item => `
-        <li data-query="${escapeHTML(item)}" style="cursor:pointer;">${escapeHTML(item)}</li>
+        <li data-query="${escapeHTML(item)}" style="cursor:pointer; padding: 4px 0;">${escapeHTML(item)}</li>
     `).join('');
 }
 
