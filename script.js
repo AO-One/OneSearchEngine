@@ -1,5 +1,5 @@
 /* ONE-OS HYBRID SEARCH ENGINE - MASTER LOGIC
-   Features: Local Ads, HostGPT AI, Native DuckDuckGo Proxy Web Search, YouTube Integration & Multi-Device SafeSearch
+   Features: Local Ads, HostGPT AI, Native OneSearch Web Index Proxy, YouTube Integration & Multi-Device SafeSearch
 */
 
 // 1. LOCAL BUSINESS DATABASE (Adpagespace Index)
@@ -70,7 +70,7 @@ async function performOneSearch() {
     // A. Save to History
     saveToHistory(query);
 
-    // B. LOCAL BUSINESS SEARCH
+    // B. LOCAL BUSINESS SEARCH (Adpagespace)
     let localResults = businessIndex.filter(biz =>
         biz.name.toLowerCase().includes(query.toLowerCase()) ||
         (biz.keywords && biz.keywords.some(k => k.toLowerCase().includes(query.toLowerCase())))
@@ -98,7 +98,7 @@ async function performOneSearch() {
     }
 }
 
-// 4. EXTERNAL WEB & YOUTUBE SEARCH ENGINE ROUTER
+// 4. SEARCH ROUTER
 async function fetchSearchResults(query) {
     const resultsContainer = document.getElementById('onesearch-results');
     const safeToggle = document.getElementById('safe-search-toggle');
@@ -106,37 +106,36 @@ async function fetchSearchResults(query) {
 
     if (!resultsContainer) return;
 
-    resultsContainer.innerHTML = "<p style='color:#888;'>Searching global web index for OneSearch Engine...</p>";
+    resultsContainer.innerHTML = "<p style='color:#888;'>Searching OneSearch Web Index...</p>";
 
     try {
         // Video Intent Routing
         if (query.toLowerCase().includes("youtube") || query.toLowerCase().includes("video") || query.toLowerCase().includes("song")) {
             await renderYouTubeResults(query, resultsContainer);
         } else {
-            // Native DuckDuckGo Search Routing
+            // Native OneSearch Proxy Routing
             await renderGeneralWebResults(query, resultsContainer, isSafeEnabled);
         }
     } catch (error) {
-        resultsContainer.innerHTML = `<p style="color:red;">Error fetching live web results: ${escapeHTML(error.message)}</p>`;
+        resultsContainer.innerHTML = `<p style="color:red;">Error fetching web results: ${escapeHTML(error.message)}</p>`;
     }
 }
 
-// 5. NATIVE DUCKDUCKGO SEARCH (Via Python Proxy or Client-Side Fallback)
+// 5. NATIVE ONESEARCH WEB RENDERER (Via Python Server Proxy)
 async function renderGeneralWebResults(query, container, isSafeEnabled) {
     const cleanQuery = encodeURIComponent(query);
     const proxyUrl = `http://127.0.0.1:5000/api/search?q=${cleanQuery}&safe=${isSafeEnabled}`;
 
-    // Direct Brand Match Helper
+    // Direct Brand Matches (Screwfix, Toolstation, Wikipedia, BBC, etc.)
     let brandHtml = getDirectBrandMatch(query);
 
-    // Approach 2: Fetch full live DuckDuckGo results via Python Proxy
     try {
         const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error("Python Proxy Offline");
+        if (!response.ok) throw new Error("Backend proxy offline");
         const results = await response.json();
 
         if (Array.isArray(results) && results.length > 0) {
-            let html = brandHtml + `<h3 style="margin-bottom:12px;">DuckDuckGo Results ${isSafeEnabled ? '<span style="font-size:12px; color:#4EC9B0;">[SafeMode Active]</span>' : ''}</h3>`;
+            let html = brandHtml + `<h3 style="margin-bottom:12px; color:#fff;">OneSearch Web Index ${isSafeEnabled ? '<span style="font-size:12px; color:#4EC9B0;">[SafeMode Active]</span>' : ''}</h3>`;
 
             results.forEach(item => {
                 html += `
@@ -154,72 +153,21 @@ async function renderGeneralWebResults(query, container, isSafeEnabled) {
             return;
         }
     } catch (err) {
-        console.warn("Python backend proxy (server.py) not running at http://127.0.0.1:5000. Switching to Instant Answer API.");
+        console.warn("OneSearch backend offline at http://127.0.0.1:5000");
     }
 
-    // Approach 1 Fallback: Client-Side DDG Instant Answer API
-    await renderFallbackDDG(cleanQuery, query, container, isSafeEnabled, brandHtml);
+    // Fallback UI when server.py is not running
+    container.innerHTML = brandHtml + `
+        <div class="result-card" style="padding:16px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
+            <h4 style="margin:0 0 8px 0; color:#fff;">OneSearch Engine Backend Standby</h4>
+            <p style="color:#aaa; font-size:13px; margin:0;">
+                Please start <code>server.py</code> on port 5000 to stream live web search results directly inside OneSearch Engine.
+            </p>
+        </div>
+    `;
 }
 
-// Client-Side Fallback Handler
-async function renderFallbackDDG(cleanQuery, rawQuery, container, isSafeEnabled, brandHtml) {
-    const ddgApiUrl = `https://api.duckduckgo.com/?q=${cleanQuery}&format=json&no_redirect=1&no_html=1`;
-
-    try {
-        const response = await fetch(ddgApiUrl);
-        const data = await response.json();
-
-        let html = brandHtml + `<h3 style="margin-bottom:12px;">DuckDuckGo Web Results</h3>`;
-        let found = false;
-
-        // Render Abstract/Instant Answer if present
-        if (data.AbstractText) {
-            found = true;
-            html += `
-                <div class="result-card" style="margin-bottom:12px; padding:12px; background:#1e1e1e; border-radius:8px; border:1px solid #4EC9B0;">
-                    <a href="${escapeHTML(data.AbstractURL)}" target="_blank" style="color:#4EC9B0; font-size:16px; font-weight:bold; text-decoration:none;">${escapeHTML(data.Heading)}</a>
-                    <div style="color:#888; font-size:12px; margin: 4px 0;">${escapeHTML(data.AbstractURL)}</div>
-                    <p style="color:#ccc; font-size:13px; margin-top:6px;">${escapeHTML(data.AbstractText)}</p>
-                </div>
-            `;
-        }
-
-        // Render Related Topics
-        if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-            data.RelatedTopics.slice(0, 6).forEach(topic => {
-                if (topic.FirstURL && topic.Text) {
-                    found = true;
-                    html += `
-                        <div class="result-card" style="margin-bottom:12px; padding:12px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
-                            <a href="${escapeHTML(topic.FirstURL)}" target="_blank" style="color:#66c0f4; font-size:15px; font-weight:bold; text-decoration:none;">
-                                ${escapeHTML(topic.Text.split(' - ')[0] || topic.Text)}
-                            </a>
-                            <div style="color:#888; font-size:12px; margin: 4px 0;">${escapeHTML(topic.FirstURL)}</div>
-                            <p style="color:#ccc; font-size:13px; margin:0;">${escapeHTML(topic.Text)}</p>
-                        </div>
-                    `;
-                }
-            });
-        }
-
-        if (found) {
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = brandHtml + `
-                <div class="result-card" style="padding:16px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
-                    <p style="color:#aaa; font-size:13px;">To display full live search results directly inside OneSearch Engine, start <code>server.py</code> on port 5000.</p>
-                    <a href="https://duckduckgo.com/?q=${cleanQuery}&kp=${isSafeEnabled ? '1' : '-1'}" target="_blank" class="btn-primary" style="padding:8px 14px; background:#de5833; color:#fff; text-decoration:none; border-radius:4px; font-size:13px; display:inline-block; margin-top:8px;">
-                        Search "${escapeHTML(rawQuery)}" on DuckDuckGo Website
-                    </a>
-                </div>
-            `;
-        }
-    } catch (e) {
-        container.innerHTML = `<p style="color:red;">Unable to load DuckDuckGo web search results.</p>`;
-    }
-}
-
-// Helper: Checks for Direct Brand Matches
+// Helper: Direct Brand Match Resolver
 function getDirectBrandMatch(query) {
     const lowerQuery = query.toLowerCase().trim();
     const knownSites = {
@@ -287,7 +235,7 @@ async function renderYouTubeResults(query, container) {
     }
 }
 
-// 7. UI DISPLAY FUNCTIONS
+// 7. LOCAL BUSINESS UI DISPLAY
 function displayLocalResults(results) {
     const container = document.getElementById('local-results-container');
     if (!container) return;
@@ -306,7 +254,7 @@ function displayLocalResults(results) {
     `).join('');
 }
 
-// 8. MEMORY & HISTORY SLL
+// 8. HISTORY & MEMORY SLL
 function saveToHistory(query) {
     let history = JSON.parse(localStorage.getItem('oneSearchHistory')) || [];
     history = history.filter(item => item !== query);
@@ -325,7 +273,7 @@ function displayHistory() {
     `).join('');
 }
 
-// Explicitly export to window scope for external controls
+// Explicitly export to window scope
 window.autoFillSearch = function(item) {
     const input = document.getElementById('search-input');
     if (input) input.value = item;
