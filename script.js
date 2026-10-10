@@ -121,7 +121,7 @@ async function fetchSearchResults(query) {
     }
 }
 
-// 5. NATIVE ONESEARCH WEB RENDERER (Via Python Server Proxy)
+// 5. NATIVE ONESEARCH WEB RENDERER (Via Local SQLite / FTS5 Backend)
 async function renderGeneralWebResults(query, container, isSafeEnabled) {
     const cleanQuery = encodeURIComponent(query);
     const proxyUrl = `http://127.0.0.1:5000/api/search?q=${cleanQuery}&safe=${isSafeEnabled}`;
@@ -140,8 +140,8 @@ async function renderGeneralWebResults(query, container, isSafeEnabled) {
             results.forEach(item => {
                 html += `
                     <div class="result-card" style="margin-bottom:12px; padding:12px; background:#1e1e1e; border-radius:8px; border:1px solid #333;">
-                        <a href="${escapeHTML(item.href)}" target="_blank" style="color:#4EC9B0; font-size:16px; font-weight:bold; text-decoration:none;">
-                            ${escapeHTML(item.title)}
+                        <a href="${escapeHTML(item.href)}" target="_blank" rel="noopener noreferrer" style="color:#4EC9B0; font-size:16px; font-weight:bold; text-decoration:none;">
+                            ${escapeHTML(item.title)} ↗
                         </a>
                         <div style="color:#888; font-size:12px; margin: 4px 0;">${escapeHTML(item.href)}</div>
                         <p style="color:#ccc; font-size:13px; margin:0;">${escapeHTML(item.body)}</p>
@@ -182,7 +182,7 @@ function getDirectBrandMatch(query) {
         return `
             <div class="result-card" style="margin-bottom:15px; padding:14px; background:#1b2838; border-radius:8px; border:1px solid #4EC9B0;">
                 <span style="font-size:11px; color:#4EC9B0; font-weight:bold; text-transform:uppercase;">Direct Match</span>
-                <h3 style="margin:4px 0 6px 0;"><a href="${site.url}" target="_blank" style="color:#66c0f4; text-decoration:none;">${escapeHTML(site.name)}</a></h3>
+                <h3 style="margin:4px 0 6px 0;"><a href="${site.url}" target="_blank" rel="noopener noreferrer" style="color:#66c0f4; text-decoration:none;">${escapeHTML(site.name)} ↗</a></h3>
                 <div style="color:#888; font-size:12px; margin-bottom:6px;">${escapeHTML(site.url)}</div>
                 <p style="color:#ccc; font-size:13px; margin:0;">${escapeHTML(site.desc)}</p>
             </div>
@@ -212,9 +212,9 @@ async function renderYouTubeResults(query, container) {
             const thumbUrl = video.videoThumbnails && video.videoThumbnails.length > 0 ? video.videoThumbnails[0].url : '';
             html += `
                 <div class="video-card" style="border: 1px solid #333; padding: 10px; border-radius: 8px; background: #1e1e1e;">
-                    <a href="https://www.youtube.com/watch?v=${escapeHTML(video.videoId)}" target="_blank" style="text-decoration:none; color:white;">
+                    <a href="https://www.youtube.com/watch?v=${escapeHTML(video.videoId)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:white;">
                         <img src="${escapeHTML(thumbUrl)}" style="width:100%; border-radius:6px; aspect-ratio: 16/9; object-fit: cover;" alt="${escapeHTML(video.title)}" />
-                        <h4 style="margin: 8px 0 4px 0; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(video.title)}</h4>
+                        <h4 style="margin: 8px 0 4px 0; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(video.title)} ↗</h4>
                         <span style="font-size:12px; color:#aaa;">${escapeHTML(video.author)}</span>
                     </a>
                 </div>
@@ -227,8 +227,8 @@ async function renderYouTubeResults(query, container) {
         container.innerHTML = `
             <div style="padding:15px; background:#1e1e1e; border-radius:8px; border:1px solid #333; margin-top:10px;">
                 <p><strong>YouTube Search Gateway:</strong></p>
-                <a href="https://www.youtube.com/results?search_query=${cleanQuery}" target="_blank" style="color:#4EC9B0; font-size:16px;">
-                    ▶ View results for "${escapeHTML(query)}" on YouTube
+                <a href="https://www.youtube.com/results?search_query=${cleanQuery}" target="_blank" rel="noopener noreferrer" style="color:#4EC9B0; font-size:16px;">
+                    ▶ View results for "${escapeHTML(query)}" on YouTube ↗
                 </a>
             </div>
         `;
@@ -249,7 +249,7 @@ function displayLocalResults(results) {
         <div class="result-card">
             <h3>${escapeHTML(biz.name)}</h3>
             <span class="category-tag">${escapeHTML(biz.category)}</span>
-            <a href="${escapeHTML(biz.link)}" class="btn-primary" target="_blank">View Website</a>
+            <a href="${escapeHTML(biz.link)}" class="btn-primary" target="_blank" rel="noopener noreferrer">View Website ↗</a>
         </div>
     `).join('');
 }
